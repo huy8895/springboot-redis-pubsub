@@ -1,8 +1,8 @@
 
 redis:
   port: ${REDIS_PORT:12264}
-  host: ${REDIS_HOST:redis-12264.c275.us-east-1-4.ec2.cloud.redislabs.com}
+  host: ${REDIS_HOST:}
   database: 0
   timeout: ${REDIS_TIMEOUT:360}
   username: default
-  password : ${REDIS_PASSWORD:hue6hlIfDis9exnNLh4cI0kHKeyDcPfi}
+  password : ${REDIS_PASSWORD:}

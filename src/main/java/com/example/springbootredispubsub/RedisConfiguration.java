@@ -68,7 +68,7 @@ public class RedisConfiguration {
 		jedis.subscribe(new JedisPubSub() {
 			@Override
 			public void onMessage(String channel, String message) {
-				System.out.println("Key expired: " + message);
+				log.info("Key expired: " + message);
 			}
 		}, "__keyevent@0__:expired");
 		

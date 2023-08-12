@@ -17,6 +17,7 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.JedisPubSub;
+import redis.clients.jedis.params.SetParams;
 
 
 @Configuration
@@ -62,19 +63,52 @@ public class RedisConfiguration {
 	}
 	
 	@Bean
-	public JedisPool poolConfig(){
+	public Jedis jedisDefault(){
+		JedisPool pool = new JedisPool(new JedisPoolConfig(), redisHost, redisPort, username, redisPassword);
+		Jedis jedis = pool.getResource();
+		return jedis;
+	}
+	
+	@Bean
+	public JedisPool poolConfig(Jedis jedisDefault){
 		JedisPool pool = new JedisPool(new JedisPoolConfig(), redisHost, redisPort, username, redisPassword);
 		Jedis jedis = pool.getResource();
 		jedis.subscribe(new JedisPubSub() {
 			@Override
 			public void onMessage(String channel, String message) {
-				log.info("Key expired: " + message);
+				String lockKey = "myLockKey";
+				int lockTimeout = 10000; // 10 seconds
+				boolean lockAcquired = false;
+				try {
+					// Try to acquire the lock
+					SetParams params = new SetParams();
+					params.nx()
+					      .px(lockTimeout);
+					String result = jedisDefault.set(lockKey, "lock", params);
+					if ("OK".equals(result)) {
+						// Lock acquired
+						lockAcquired = true;
+						// Process the event
+						System.out.println("Key expired: " + message);
+					} else {
+						// Lock not acquired
+						// Another instance is processing the event
+						log.info("Lock not acquired Another instance is processing the event");
+					}
+				} finally {
+					if (lockAcquired) {
+						// Release the lock
+						jedisDefault.del(lockKey);
+					}
+				}
 			}
 		}, "__keyevent@0__:expired");
 		
 		return pool;
 	}
 
+	
+	
 	@Bean
 	public RedisTemplate<String, Object> redisTemplate() {
 		RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
